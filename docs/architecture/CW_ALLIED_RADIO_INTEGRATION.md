@@ -1,113 +1,130 @@
-# Career Wingman ↔ IL-2 Allied Radio Integration
+# Career Wingman ↔ IL-2 Radio Control Integration
 
 Date: 2026-09-18
-Status: Architecture decision based on Allied Radio v6.2 acceptance candidate
+Status: Architecture decision; Allied Radio v6.2 is a reference release candidate, not a fixed dependency
 
 ## Objective
 
-Reuse the working IL-2 Allied Radio bridge as Career Wingman's radio-mode and player-lifecycle authority. Career Wingman dialogue must only enter the audio channel when the selected mode and verified aircraft policy permit it.
+Reuse proven mechanisms from the IL-2 Allied Radio project without freezing Career Wingman to version 6.2. Later Allied Radio releases may revise their API, states and implementation.
 
-## Existing reusable capabilities
+When Career Wingman's enhanced combat-radio session is active, Career Wingman owns the combat-radio channel. Every managed IL-2 native AI voice group must remain suppressed for the complete enhanced session so generated conversation takes precedence without routine native-voice collisions.
 
-The inspected v6.2 build already provides:
+## Proven reference capabilities
 
-- a Windows bridge executable;
-- a local HTTP control/status API on `127.0.0.1:49152`;
+The inspected Allied Radio v6.2 candidate demonstrates:
+
+- a Windows bridge and local status/control API;
 - passive global hotkey observation;
 - forwarded IL-2 UDP telemetry handling;
 - `_gen.Mission` parsing;
-- unique single-player/Career player selection using `AILevel=0`;
-- correlation between mission aircraft and live telemetry identity;
-- player `ACTIVE`, `DEAD` and restarted-aircraft lifecycle handling;
-- nation-aware voice-group policy;
-- `COMBAT` and `BROADCAST` state;
-- `NO_TOUCH` handling for uncertain classifications;
-- aircraft radio-equipment policy and forced radio silence;
-- recovery logic for renamed IL-2 audio folders;
-- browser heartbeat and abnormal-exit recovery.
+- single-player/Career player selection using a unique `AILevel=0` aircraft;
+- correlation between mission aircraft and telemetry identity;
+- player lifecycle handling;
+- mission, nation and voice-group policy;
+- `COMBAT`, `BROADCAST`, `NO_TOUCH` and forced-silence decisions;
+- safe audio-folder transitions, conflict checks and recovery;
+- heartbeat and abnormal-exit recovery.
 
-Career Wingman should consume these decisions rather than duplicating them.
+These capabilities are evidence and reusable building blocks, not a requirement to preserve the exact v6.2 design.
 
-## Required mode contract
+## Required operating contract
 
-| Allied Radio state | Native IL-2 voice policy | Historical broadcast | Career Wingman conversation |
+| Combined state | Native IL-2 AI voices | Historical broadcast | Career Wingman dialogue |
 |---|---|---|---|
-| `COMBAT`, player `ACTIVE`, radio allowed | Nation-appropriate friendly group enabled; managed enemy groups suppressed | Off | **Allowed** |
-| `BROADCAST` | GBR, USA and GER managed groups suppressed | On | **Muted/blocked** |
-| Player `DEAD` | Allied Radio performs no new folder transition; IL-2 remains responsible | Stopped | **Stop current line and clear/suspend queue** |
-| Forced radio silence | Managed voice groups silenced | Off | **Muted/blocked** |
-| `NO_TOUCH` | No new folder manipulation | Off | **Muted by default** because identity/policy is uncertain |
-| Telemetry/player state unknown | Preserve existing Radio safety behavior | Do not start | **Muted by default** |
-| New/restarted verified aircraft | Reset to nation-appropriate `COMBAT` | Off | Resume only after fresh validation |
+| Enhanced `COMBAT`, player active and radio allowed | **All managed voice groups suppressed** | Off | **Allowed; Career Wingman owns channel** |
+| `BROADCAST` | All managed voice groups suppressed | On | **Muted** |
+| Player dead/absent during enhanced session | Keep suppression stable until orderly release or revalidation | Stopped | **Stop current line and clear/suspend queue** |
+| Forced radio silence | Suppressed | Off | **Muted** |
+| `NO_TOUCH` before session start | No new manipulation | Off | **Do not start** |
+| Unknown/stale state before session start | Preserve safe existing condition | Off | **Do not start** |
+| New/restarted verified aircraft | Revalidate before continuing suppression | Off | Resume only after validation |
+| Enhanced mode disabled or orderly exit | Restore appropriate ordinary Radio/native policy | Follow selected mode | Off |
 
-The user-facing rule is therefore:
+> Career Wingman speech is audible only in verified enhanced COMBAT mode. During that mode, all managed IL-2 native AI voices are suppressed and Career Wingman exclusively supplies radio conversation.
 
-> Career Wingman conversation is audible only in verified COMBAT mode. BROADCAST, forced silence, DEAD, NO_TOUCH or uncertain state suppresses it.
+## Responsibility boundary
 
-## Integration boundary
+The shared Radio Control service owns:
 
-Allied Radio remains the owner of:
-
-- radio mode selection;
-- native voice-folder policy;
+- mode selection;
+- native voice suppression and restoration;
 - historical broadcast playback;
 - aircraft radio availability;
 - mission/player/nation validation;
 - global radio hotkeys;
-- player lifecycle interlocks.
+- lifecycle interlocks;
+- crash and stale-session recovery.
 
 Career Wingman owns:
 
 - event normalization;
 - participant and formation state;
 - conversation planning;
-- radio priority and channel arbitration;
+- radio priorities and channel arbitration;
 - AI prompt construction and validation;
-- synthetic/recorded wingman speech;
+- generated/recorded speech;
 - optional text transcript/overlay;
 - squadron and historical memory.
 
-## Proposed local interface
+Career Wingman must never rename IL-2 voice folders directly. It requests channel ownership; the Radio Control service performs suppression and restoration atomically.
 
-Career Wingman should initially read the existing bridge `State` response and use at least:
+## Version-independent adapter
 
-- `playerAlive`;
-- `aircraftData`;
-- `aircraftName`;
-- `broadcastMode`;
-- `radioPolicy`;
-- `forcedRadioSilence`;
-- `deadInterlock`;
-- `missionTheater`;
-- `missionPolicy`;
-- `playerNation`;
-- `voiceGroup`;
-- telemetry-active and packet-count health signals.
+Career Wingman should depend on capabilities, not on an Allied Radio version number. The adapter should expose operations equivalent to:
 
-Career Wingman should calculate a single gate:
+```text
+GetRadioCapabilities()
+GetRadioState()
+AcquireEnhancedCombatChannel(owner, leaseDuration)
+RenewEnhancedCombatChannel(lease)
+ReleaseEnhancedCombatChannel(lease)
+SetBroadcastMode(on)
+SubscribeToStateChanges()
+```
+
+The exact transport can initially use the v6.2 local HTTP API. Exact v6.2 field names must remain inside the adapter.
+
+## Leased channel ownership
+
+Enhanced channel ownership must use a renewable lease:
+
+1. Career Wingman requests ownership.
+2. Radio Control verifies player, mission, aircraft policy and mode.
+3. Radio Control suppresses all managed native voice groups.
+4. Only after suppression succeeds does it grant the lease.
+5. Career Wingman renews the lease through a heartbeat.
+6. On orderly exit it releases the lease.
+7. On crash or stale heartbeat, Radio Control restores the appropriate ordinary radio policy automatically.
+
+This prevents voice folders remaining disabled after Career Wingman terminates unexpectedly.
+
+## Conversation gate
 
 ```text
 conversationAllowed =
-    bridge healthy
+    radio service healthy
     AND telemetry/player validation healthy
     AND player ACTIVE
-    AND mission policy permits managed radio
+    AND mission policy permits radio
     AND aircraft policy is not SILENCE
     AND forcedRadioSilence is false
     AND broadcastMode is false
+    AND enhanced-channel lease is valid
+    AND native-suppression confirmation is true
 ```
 
-When this expression changes from true to false:
+When this becomes false:
 
-1. stop or rapidly fade any Career Wingman line;
-2. clear expired tactical messages;
-3. suspend narrative messages;
-4. preserve only messages explicitly eligible for later replay;
-5. log the gate transition and reason.
+1. stop or rapidly fade the current Career Wingman line;
+2. discard expired tactical traffic;
+3. suspend narrative traffic;
+4. prevent backlog dumping when service resumes;
+5. release ownership when appropriate;
+6. log the transition and reason.
 
 ## Channel arbitration
 
-Career Wingman should use one internal channel queue:
+Career Wingman maintains one logical radio queue:
 
 1. immediate warning;
 2. tactical command;
@@ -116,92 +133,94 @@ Career Wingman should use one internal channel queue:
 5. ground-control report;
 6. squadron/historical narrative.
 
-`BROADCAST` overrides and blocks every Career Wingman priority. Narrative traffic must never interrupt or leak into historical broadcast mode.
+`BROADCAST` blocks every Career Wingman priority. Switching to BROADCAST retains native-voice suppression, stops generated speech and starts historical playback.
 
 ## What IL-2 currently allows or exposes
 
-### Confirmed/implemented externally
+### Confirmed or demonstrated externally
 
-- An external companion can play audio while IL-2 runs.
-- The existing project can observe the configured physical hotkey without preventing IL-2 from receiving it.
-- The existing project can use forwarded UDP telemetry and mission data to classify the player and lifecycle state.
-- The existing project can manage known nationality voice folders to implement broad COMBAT/BROADCAST availability policy, with safety and recovery logic.
-- Mission-authored Subtitle and Media MCUs can display text and play sound when prepared in the mission before it runs.
+- External companion audio can play while IL-2 runs.
+- A passive observer can see the configured radio hotkey without consuming it.
+- Mission and forwarded telemetry data can support player and policy classification.
+- Known nationality voice folders can be managed with conflict and recovery safeguards.
+- Mission-authored Subtitle and Media MCUs can display prepared text and play prepared audio.
 
-### Not currently exposed by a documented single-player interface
+### Not exposed through a documented single-player runtime interface
 
-- inject a newly generated line into IL-2's native radio system;
-- identify exactly when an internal IL-2 voice line starts or ends;
-- target an arbitrary native radio line to a dynamically selected recipient;
-- change native Subtitle/Media content after the active Career mission has loaded;
-- control Career-mode radio through DServer RCon;
-- independently duck only IL-2's native voice channel while preserving every other IL-2 sound.
+- injection of a generated line into IL-2's internal radio engine;
+- reliable notification of native voice playback start/end;
+- dynamic native-radio recipient selection;
+- rewriting active Career Subtitle/Media content after load;
+- Career control through multiplayer DServer RCon;
+- independent volume control for only IL-2 native voices while preserving other game sounds.
 
-## Native-voice collision limitation
+## Native suppression requirement and limitation
 
-In COMBAT mode, IL-2's permitted friendly voice folder remains available. Career Wingman's external speech may therefore overlap a native IL-2 voice line.
+Full native suppression is the required Career Wingman model, not an optional future feature.
 
-The current project has no proven native-radio playback-state signal. Renaming a voice folder determines broad availability but does not prove that already loaded/cached audio will stop, and repeatedly renaming folders around every generated line would introduce race and recovery risks.
+Suppression is applied once for the enhanced session, not around individual messages. This avoids repeated folder operations and gives the generated conversation clear precedence.
 
-Initial policy:
+A controlled test must still determine whether IL-2 preloads or caches any native voice clips before suppression. If one preloaded clip can complete, document it as a startup-transition limitation. There should be no continuing native AI chatter after ownership is granted.
 
-- do not perform per-line folder renames;
-- do not claim collision-free native integration;
-- keep generated messages short;
-- use conservative cooldowns after major detected events;
-- log overlap observations during testing;
-- investigate whether game logs, telemetry or repeatable file access reveal native voice playback timing.
+## Failure behaviour
 
-If collisions remain unacceptable, evaluate an optional future **Career Wingman-owned combat channel** in which native friendly chatter is suppressed for the whole enhanced-radio session and Career Wingman supplies the conversation. This must be a separate, explicitly tested mode and must not alter the locked v6.2 behavior silently.
+Career Wingman fails silent if:
 
-## Failure behavior
-
-Career Wingman must fail silent when:
-
-- Allied Radio bridge cannot be reached;
+- the Radio Control service is unavailable;
 - state is stale;
 - player or mission identity is uncertain;
 - the aircraft is verified as lacking usable radio equipment;
-- mode is BROADCAST;
-- the player lifecycle is DEAD/ABSENT;
-- an unsupported theatre or policy produces `NO_TOUCH`.
+- BROADCAST is active;
+- the player is dead/absent;
+- policy returns `NO_TOUCH`;
+- native suppression cannot be confirmed;
+- the ownership lease is lost.
 
-The flight must remain unaffected if Career Wingman stops or crashes.
+The flight must remain unaffected. Lease expiry restores the appropriate native folder policy.
 
 ## Test sequence
 
-### AR-CW-01: state observation
+### AR-CW-01: adapter observation
 
-Read bridge state without modifying it. Confirm all gate inputs for a verified Career flight.
+Read current state through the version-independent adapter without modifying it.
 
-### AR-CW-02: COMBAT permission
+### AR-CW-02: acquire enhanced combat channel
 
-With player ACTIVE and mode COMBAT, play one test Career Wingman line. Confirm historical broadcast is off.
+With a verified active player in COMBAT, request ownership. Confirm all managed native groups are suppressed before the lease is granted.
 
-### AR-CW-03: BROADCAST suppression
+### AR-CW-03: conversation output
 
-While a Career Wingman line is queued, switch to BROADCAST. Confirm the line stops/fades, queue is blocked and only historical audio remains.
+Play one test Career Wingman line only after suppression confirmation.
 
-### AR-CW-04: return to COMBAT
+### AR-CW-04: broadcast takeover
 
-Switch back to COMBAT. Confirm narrative backlog does not dump immediately and new validated traffic can play.
+Switch to BROADCAST during a queued/generated message. Confirm Career Wingman stops, native voices remain suppressed and only historical audio plays.
 
-### AR-CW-05: DEAD interlock
+### AR-CW-05: return to enhanced combat
 
-During a controlled test, verify that DEAD stops Career Wingman audio and prevents new lines. Do not modify IL-2 voice folders as a consequence of DEAD.
+Confirm ownership is reacquired and no delayed narrative backlog is dumped.
 
-### AR-CW-06: restart/new aircraft
+### AR-CW-06: player lifecycle
 
-Confirm fresh aircraft validation and default COMBAT reset before Career Wingman resumes.
+Confirm dead/absent stops speech while suppression remains stable until orderly release or new-aircraft revalidation.
 
 ### AR-CW-07: uncertain mission
 
-Force or reproduce `NO_TOUCH`; verify Career Wingman remains silent.
+Reproduce `NO_TOUCH`; confirm ownership is not granted and Career Wingman remains silent.
 
-### AR-CW-08: native voice collision logging
+### AR-CW-08: native-cache test
 
-Run multiple sorties in COMBAT mode and manually mark any overlap between IL-2 native speech and Career Wingman speech. Use results to decide whether a future channel-ownership mode is needed.
+Acquire ownership at several mission phases and determine whether any already cached native clip can finish. Confirm no continuing native chatter.
+
+### AR-CW-09: lease failure recovery
+
+Terminate Career Wingman without releasing ownership. Confirm Radio Control detects lease expiry and restores the correct ordinary policy.
+
+### AR-CW-10: future Radio compatibility
+
+Run the same contract tests against later Allied Radio candidates without changing the conversation engine.
 
 ## Decision
 
-Use IL-2 Allied Radio v6.2 as the shared radio-state authority. Do not merge its code into Career Wingman yet. Integrate through the local bridge API so both projects remain independently testable and failures remain isolated.
+Treat Allied Radio v6.2 as a valuable release candidate and evidence source, not the final dependency. Build a version-independent Radio Control adapter. During enhanced COMBAT, suppress every managed IL-2 native AI voice group and give Career Wingman exclusive ownership of radio conversation.
+
