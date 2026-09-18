@@ -279,6 +279,36 @@ Conclusion: although `mission_text_log = 1` is configured and historical text re
 
 Evidence limit: this run does not exclude a longer periodic flush interval or text generation at mission finalization. A finish-boundary test is required to distinguish those possibilities.
 
+## Test 12 — Text-report behavior at Finish Mission
+
+Result: PASS — CURRENT RUN CREATED MLG ONLY
+
+Timeline:
+
+- `ACTIVE - BEFORE FINISH`: elapsed 5,282 ms;
+- new `.mlg` detected: elapsed 12,738 ms;
+- `DEBRIEF VISIBLE`: elapsed 32,174 ms.
+
+New file:
+
+- path: `data\FlightLogs\missionReport(2026-09-19_03-00-32).mlg`;
+- initial observed size: 16,844 bytes;
+- read access: `read-open=OK`.
+
+Measured boundaries:
+
+- the `.mlg` appeared 7.456 seconds after the active/before-Finish-Mission mark;
+- it appeared 19.436 seconds before the debrief-visible mark.
+
+Observed text behavior:
+
+- ten historical `missionReport*.txt` files were monitored successfully;
+- no current text report was created or changed at mission exit;
+- no text activity occurred during the subsequent debrief/wait interval;
+- no ERROR or BLOCKED record occurred.
+
+Conclusion: combined Tests 11 and 12 show that this current Career run produced neither live text segments nor an automatic text report at mission finalization, despite `mission_text_log = 1`. Only the binary `.mlg` was created at the finish boundary. The previously inspected numbered text files cannot be treated as proof of a current automatic live text stream; their precise origin remains unproven by these captures. Live-event testing should now move to the configured local UDP outputs.
+
 ## Remaining CW 0.1A gates
 
 - Career mission briefing/generation timing;
