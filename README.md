@@ -1,61 +1,64 @@
-IL-2 CAREER WINGMAN — CW 0.1 FLIGHTLOG PROBE
-================================================
+# IL-2 Career Wingman
 
-Purpose
--------
-This instrumentation build measures exactly when IL-2 creates or changes:
+Career Wingman is an external Windows companion for IL-2 Great Battles single-player Career. Its goal is to add persistent, historically disciplined radio conversation among the player, a flight of up to eight aircraft, ground control, and escorting or escorted formations.
 
-  * FlightLogs\*.mlg
-  * _gen.Mission
-  * cp.db
+It complements Career Tracker: confirmed career facts remain with the tracker, while Career Wingman uses verified mission context and history to create tactical radio traffic, character continuity and squadron narrative.
 
-It does not interpret combat events yet. It establishes whether useful mission
-data reaches disk during flight, after landing, or only after debrief.
+## Current status
 
-Requirements
-------------
-Windows 10 or Windows 11. No installation or extra runtime is required.
-The launcher uses Windows PowerShell and WinForms already included with Windows.
+The project is in **CW 0.1 — evidence gathering**. The current probe measures when IL-2 creates or changes:
 
-How to use
-----------
+- `FlightLogs\*.mlg`
+- `_gen.Mission`
+- `cp.db`
+
+It does not yet interpret combat events. Its purpose is to establish which information is available before flight, during flight and after debrief.
+
+## Architecture
+
+Read the [authoritative project blueprint](docs/architecture/CW_PROJECT_BLUEPRINT.md) first.
+
+The supported design is an external companion consisting of:
+
+- Career Wingman Core for mission state, events, doctrine and conversation;
+- Radio Control Service for native-voice suppression, channel ownership and recovery;
+- Speech Worker for local clips, streaming TTS and offline fallback;
+- Audio engine for priority, interruption and WWII radio processing.
+
+Urgent tactical calls remain deterministic and locally available. Online TTS is an optional rendering layer for dynamic speech, not a source of game facts and not a dependency for critical warnings.
+
+## CW 0.1 probe
+
+### Requirements
+
+Windows 10 or Windows 11. No additional runtime is required. The launcher uses Windows PowerShell and WinForms included with Windows.
+
+### How to use
+
 1. Extract the complete ZIP to a normal folder.
-2. Double-click Start_CW_0.1.cmd.
-3. Choose the IL-2 data folder containing FlightLogs. Common installations use
-   a path ending in IL-2 Sturmovik Battle of Stalingrad\data.
-4. Click Start capture before starting/loading a Career mission.
-5. While flying, type a short note and click Mark event immediately after each
-   controlled test action (mission loaded, takeoff, combat begins, aircraft
-   damaged/destroyed, landing, mission ends, debrief opened).
-6. Click Stop capture after the debrief screen.
-7. Send back the newest folder inside Captures. Its events.jsonl file contains
-   timestamps, file sizes, byte deltas and read-open results.
+2. Double-click `Start_CW_0.1.cmd`.
+3. Choose the IL-2 data folder containing `FlightLogs`.
+4. Start capture before loading a Career mission.
+5. Mark controlled events such as mission load, takeoff, combat, damage, landing, mission end and debrief.
+6. Stop capture after debrief.
+7. Retain the newest folder inside `Captures` for analysis.
 
-What the results mean
----------------------
-Repeated CHANGED rows for an .mlg during flight prove that IL-2 is flushing data
-before mission completion. "read-open=OK" proves the active file can be opened
-read-only with file sharing enabled; it does not yet prove incomplete data can
-be converted by mlg2txt.
+The probe opens watched files read-only and writes only to its own `Captures` folder. It does not inject code, read process memory or modify IL-2 files.
 
-Safety and privacy
-------------------
-The probe opens watched files read-only and never changes IL-2 files. It does
-not use the internet, administrator rights, a Windows service, DLL injection,
-process memory access, registry writes, or telemetry ports. It writes only to
-its own Captures folder. Paths in the log can reveal the Windows account/folder
-name, so review the log before sharing it publicly.
+## Documentation
 
-Known CW 0.1 limitation
------------------------
-This build intentionally does not bundle or run mlg2txt. First we must prove
-when .mlg files grow and whether Windows permits read access while IL-2 writes.
-Conversion of safe snapshots belongs in CW 0.1B after this timing test.
+- [Authoritative project blueprint](docs/architecture/CW_PROJECT_BLUEPRINT.md)
+- [End-to-end technical architecture](docs/architecture/CW_END_TO_END_TECHNICAL_ARCHITECTURE.md)
+- [Dynamic conversation architecture](docs/architecture/CW_DYNAMIC_CONVERSATION_ARCHITECTURE.md)
+- [Allied Radio integration](docs/architecture/CW_ALLIED_RADIO_INTEGRATION.md)
+- [TTS provider and low-latency speech architecture](docs/architecture/CW_TTS_PROVIDER_ARCHITECTURE.md)
+- [Dynamic in-flight output feasibility](docs/research/CW_DYNAMIC_OUTPUT_FEASIBILITY.md)
 
-Research and architecture
--------------------------
-* [Dynamic in-flight messages and audio feasibility](docs/research/CW_DYNAMIC_OUTPUT_FEASIBILITY.md)
-* [Dynamic conversation architecture](docs/architecture/CW_DYNAMIC_CONVERSATION_ARCHITECTURE.md)
-* [Allied Radio integration](docs/architecture/CW_ALLIED_RADIO_INTEGRATION.md)
-* [End-to-end technical architecture](docs/architecture/CW_END_TO_END_TECHNICAL_ARCHITECTURE.md)
-* [TTS provider and low-latency speech architecture](docs/architecture/CW_TTS_PROVIDER_ARCHITECTURE.md)
+## Development order
+
+1. Prove the available input feeds.
+2. Prove external audio and crash-safe native-voice suppression.
+3. Build provider-neutral speech with local tactical clips and Gemini streaming.
+4. Complete one replayable event-to-radio vertical slice.
+5. Expand to formation, ground-control and escort radio.
+6. Add Career Tracker continuity and historical doctrine packs.
