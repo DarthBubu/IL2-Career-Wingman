@@ -231,6 +231,30 @@ Conclusion: decoded `.mlg` content can support authoritative post-flight reconci
 
 Engineering consequence: CW should join preflight `_gen.Mission` identities with post-flight decoded `.mlg` identities using aircraft/pilot/group relationships, while obtaining live triggers from a separate source.
 
+## Test 10 — startup.cfg capability inspection
+
+Result: PASS — TEXT REPORT AND LOCAL UDP OUTPUTS ALREADY ENABLED
+
+Confirmed settings:
+
+- `[system] mission_text_log = 1`;
+- `text_log_folder = ""` and `bin_log_folder = ""`, so no custom output folder is configured;
+- `keep_binary_log = 0`;
+- `chatlog = 0` and `gamelog = 0`;
+- `[telemetrydevice] enable = true`, address `127.0.0.1`, port `24321`, decimation `1`;
+- `[motiondevice] enable = true`, address `127.0.0.1`, port `24321`, decimation `1`;
+- `[track_record] tacviewrecord = 1`.
+
+Conclusion: the game's text mission-report output is already enabled, and the five numbered text files inspected in Test 9 are candidate live segments that the previous probe did not monitor. Local telemetry and motion output are also configured, but packet content and suitability for gameplay-event inference remain unproven.
+
+Action:
+
+- extended the probe to monitor the ten newest `missionReport*.txt` files alongside `.mlg`;
+- retained read-only operation and 500 ms polling;
+- updated historical-candidate handling to avoid false removals for text reports.
+
+Implementation commit: `745b6129fed7e8285970d0443864a4854dd02977`.
+
 ## Remaining CW 0.1A gates
 
 - Career mission briefing/generation timing;
