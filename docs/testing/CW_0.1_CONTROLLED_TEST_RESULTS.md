@@ -99,6 +99,25 @@ No `.mlg` file was created or changed, and no ERROR or BLOCKED record occurred.
 
 Conclusion: in this run, selecting/opening the Career mission caused `_gen.Mission` to be rewritten approximately 39.962 seconds before the user marked the briefing as fully visible. Mission context is therefore available for read-only preflight parsing before Start Mission is clicked.
 
+## Test 6 — Start Mission to cockpit spawn
+
+Result: PASS — NO ACTIVE MLG AT COCKPIT SPAWN
+
+Timeline:
+
+- `CAREER BRIEFING - BEFORE START MISSION`: elapsed 6,684 ms;
+- `COCKPIT SPAWNED`: elapsed 41,353 ms;
+- observed loading interval between marks: 34.669 seconds.
+
+Observed result:
+
+- no new `.mlg` appeared;
+- none of the five existing `.mlg` candidates changed;
+- `_gen.Mission` remained at 29,163,996 bytes;
+- no ERROR or BLOCKED records occurred.
+
+Conclusion: in this run, loading the mission and reaching the controllable cockpit did not create or modify a monitored `.mlg`. The Career-generated `_gen.Mission` was already stable from the briefing stage. This is evidence against treating `.mlg` as a mission-start live source, while supporting preflight parsing of `_gen.Mission`.
+
 ## Remaining CW 0.1A gates
 
 - Career mission briefing/generation timing;
