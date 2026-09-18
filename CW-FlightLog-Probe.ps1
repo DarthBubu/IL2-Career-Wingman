@@ -9,6 +9,8 @@ $script:known = @{}
 $script:sessionDir = $null
 $script:writer = $null
 $script:pollMs = 500
+$script:initializing = $false
+$script:maxBaselineMlg = 5
 
 function Add-LogLine([string]$text) {
     $stamp = (Get-Date).ToString('HH:mm:ss.fff')
@@ -45,6 +47,8 @@ function Get-Targets([string]$root) {
         Select-Object -Unique | ForEach-Object {
             if (Test-Path -LiteralPath $_ -PathType Container) {
                 Get-ChildItem -LiteralPath $_ -Filter '*.mlg' -File -ErrorAction SilentlyContinue |
+                    Sort-Object LastWriteTimeUtc -Descending |
+                    Select-Object -First $script:maxBaselineMlg |
                     ForEach-Object { $result.Add($_.FullName) }
             }
         }
@@ -86,7 +90,9 @@ function Poll-Targets {
             $state = @{ Size = [long]$item.Length; Write = $item.LastWriteTimeUtc.Ticks }
             if (-not $script:known.ContainsKey($key)) {
                 $script:known[$key] = $state
-                Write-Event 'CREATED' $item.FullName $state.Size $state.Size (Test-ReadOpen $item.FullName)
+                $initialKind = if ($script:initializing) { 'BASELINE' } else { 'CREATED' }
+                $initialDelta = if ($script:initializing) { 0 } else { $state.Size }
+                Write-Event $initialKind $item.FullName $state.Size $initialDelta (Test-ReadOpen $item.FullName)
             } else {
                 $old = $script:known[$key]
                 if ($old.Size -ne $state.Size -or $old.Write -ne $state.Write) {
@@ -207,7 +213,9 @@ $start.Add_Click({
     $stop.Enabled = $true; $mark.Enabled = $true
     $status.Text = "Capturing every $($script:pollMs) ms → $script:sessionDir"
     Write-Event 'SESSION' '' 0 0 ("root=" + $root)
+    $script:initializing = $true
     Poll-Targets
+    $script:initializing = $false
     $timer.Start()
 })
 
