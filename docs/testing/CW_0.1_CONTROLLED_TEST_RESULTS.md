@@ -255,6 +255,30 @@ Action:
 
 Implementation commit: `745b6129fed7e8285970d0443864a4854dd02977`.
 
+## Test 11 — Active mission text-report monitoring
+
+Result: PASS — NO EARLY OR CONTINUOUS TEXT REPORT OUTPUT OBSERVED
+
+Timeline:
+
+- `BEFORE START MISSION`: elapsed 2,080 ms;
+- `COCKPIT ACTIVE`: elapsed 25,028 ms;
+- `AI TAKEOFF OBSERVED`: elapsed 63,711 ms;
+- `MISSION STILL ACTIVE - BEFORE FINISH`: elapsed 108,127 ms.
+
+Observed result:
+
+- 22 records total: one SESSION, 16 BASELINE, four USER_MARK and one SESSION_END;
+- baseline included five recent `.mlg` files, ten historical `missionReport*.txt` files and `_gen.Mission`;
+- all monitored baseline files returned `read-open=OK`;
+- no CREATED, CHANGED, REMOVED, ERROR or BLOCKED records;
+- no current-mission text segment appeared by the final active-mission marker;
+- no current `.mlg` appeared during the same interval.
+
+Conclusion: although `mission_text_log = 1` is configured and historical text reports exist, this controlled run produced no observable text-report creation or growth during the first 108.127 seconds of capture, including an observed AI takeoff. Therefore these files cannot yet be accepted as an early or continuously streamed live-event source.
+
+Evidence limit: this run does not exclude a longer periodic flush interval or text generation at mission finalization. A finish-boundary test is required to distinguish those possibilities.
+
 ## Remaining CW 0.1A gates
 
 - Career mission briefing/generation timing;
