@@ -52,6 +52,9 @@ This build intentionally does not bundle or run mlg2txt. First we must prove
 when .mlg files grow and whether Windows permits read access while IL-2 writes.
 Conversion of safe snapshots belongs in CW 0.1B after this timing test.
 
-Research
---------
+Research and architecture
+-------------------------
 * [Dynamic in-flight messages and audio feasibility](docs/research/CW_DYNAMIC_OUTPUT_FEASIBILITY.md)
+* [Dynamic conversation architecture](docs/architecture/CW_DYNAMIC_CONVERSATION_ARCHITECTURE.md)
+* [Allied Radio integration](docs/architecture/CW_ALLIED_RADIO_INTEGRATION.md)
+* [End-to-end technical architecture](docs/architecture/CW_END_TO_END_TECHNICAL_ARCHITECTURE.md)
