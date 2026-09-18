@@ -14,6 +14,8 @@ The project is in **CW 0.1 — evidence gathering**. The current probe measures 
 
 It does not yet interpret combat events. Its purpose is to establish which information is available before flight, during flight and after debrief.
 
+Insufficient live data is not a project stop condition. Career Wingman can degrade to mission-phase procedural radio, player-reported events and pre/post-flight Career narrative without claiming unsupported observations.
+
 ## Architecture
 
 Read the [authoritative project blueprint](docs/architecture/CW_PROJECT_BLUEPRINT.md) first.
@@ -48,6 +50,7 @@ The probe opens watched files read-only and writes only to its own `Captures` fo
 ## Documentation
 
 - [Authoritative project blueprint](docs/architecture/CW_PROJECT_BLUEPRINT.md)
+- [Limited or missing live-data fallback](docs/architecture/CW_LIMITED_DATA_FALLBACK_STRATEGY.md)
 - [End-to-end technical architecture](docs/architecture/CW_END_TO_END_TECHNICAL_ARCHITECTURE.md)
 - [Dynamic conversation architecture](docs/architecture/CW_DYNAMIC_CONVERSATION_ARCHITECTURE.md)
 - [Allied Radio integration](docs/architecture/CW_ALLIED_RADIO_INTEGRATION.md)
@@ -59,6 +62,6 @@ The probe opens watched files read-only and writes only to its own `Captures` fo
 1. Prove the available input feeds.
 2. Prove external audio and crash-safe native-voice suppression.
 3. Build provider-neutral speech with local tactical clips and Gemini streaming.
-4. Complete one replayable event-to-radio vertical slice.
+4. Complete one replayable event-to-radio vertical slice using either an automatic or player-reported event.
 5. Expand to formation, ground-control and escort radio.
 6. Add Career Tracker continuity and historical doctrine packs.
