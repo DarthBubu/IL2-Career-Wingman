@@ -11,6 +11,7 @@ $script:writer = $null
 $script:pollMs = 500
 $script:initializing = $false
 $script:maxBaselineMlg = 5
+$script:maxBaselineTxt = 10
 
 function Add-LogLine([string]$text) {
     $stamp = (Get-Date).ToString('HH:mm:ss.fff')
@@ -49,6 +50,11 @@ function Get-Targets([string]$root) {
                 Get-ChildItem -LiteralPath $_ -Filter '*.mlg' -File -ErrorAction SilentlyContinue |
                     Sort-Object LastWriteTimeUtc -Descending |
                     Select-Object -First $script:maxBaselineMlg |
+                    ForEach-Object { $result.Add($_.FullName) }
+
+                Get-ChildItem -LiteralPath $_ -Filter 'missionReport*.txt' -File -ErrorAction SilentlyContinue |
+                    Sort-Object LastWriteTimeUtc -Descending |
+                    Select-Object -First $script:maxBaselineTxt |
                     ForEach-Object { $result.Add($_.FullName) }
             }
         }
@@ -107,8 +113,8 @@ function Poll-Targets {
     }
     foreach ($key in @($script:known.Keys)) {
         if (-not $seen.ContainsKey($key)) {
-            # A historical .mlg can leave the newest-candidate set without being deleted.
-            if ($key.EndsWith('.mlg') -and (Test-Path -LiteralPath $key -PathType Leaf)) { continue }
+            # A historical report can leave the newest-candidate set without being deleted.
+            if (($key.EndsWith('.mlg') -or $key.EndsWith('.txt')) -and (Test-Path -LiteralPath $key -PathType Leaf)) { continue }
             $old = $script:known[$key]
             $script:known.Remove($key)
             Write-Event 'REMOVED' $key $old.Size 0 ''
@@ -123,7 +129,7 @@ $form.MinimumSize = New-Object System.Drawing.Size(760,520)
 $form.StartPosition = 'CenterScreen'
 
 $title = New-Object System.Windows.Forms.Label
-$title.Text = 'Read-only probe: FlightLogs (*.mlg), _gen.Mission and cp.db'
+$title.Text = 'Read-only probe: FlightLogs (*.mlg + missionReport*.txt), _gen.Mission and cp.db'
 $title.Location = New-Object System.Drawing.Point(14,14)
 $title.AutoSize = $true
 $title.Font = New-Object System.Drawing.Font('Segoe UI',11,[System.Drawing.FontStyle]::Bold)
