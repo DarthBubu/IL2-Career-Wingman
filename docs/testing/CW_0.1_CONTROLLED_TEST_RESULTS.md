@@ -118,6 +118,34 @@ Observed result:
 
 Conclusion: in this run, loading the mission and reaching the controllable cockpit did not create or modify a monitored `.mlg`. The Career-generated `_gen.Mission` was already stable from the briefing stage. This is evidence against treating `.mlg` as a mission-start live source, while supporting preflight parsing of `_gen.Mission`.
 
+## Test 7 — Engine start, crash and debrief
+
+Result: PASS — MLG CREATED BETWEEN CRASH AND DEBRIEF
+
+Timeline:
+
+- `COCKPIT - BEFORE ENGINE START`: elapsed 7,846 ms;
+- `ENGINE STARTED`: elapsed 26,330 ms;
+- `PLAYER AIRCRAFT CRASHED`: elapsed 111,510 ms;
+- new `.mlg` detected: elapsed 119,049 ms;
+- `DEBRIEF VISIBLE AFTER CRASH`: elapsed 139,482 ms.
+
+New file:
+
+- path: `data\FlightLogs\missionReport(2026-09-19_02-37-46).mlg`;
+- initial observed size: 16,931 bytes;
+- read access: `read-open=OK`.
+
+No ERROR or BLOCKED record occurred.
+
+Measured boundaries:
+
+- the `.mlg` was detected 7.539 seconds after the crash mark;
+- it was detected 20.433 seconds before the debrief-visible mark;
+- no `.mlg` existed through cockpit spawn or engine start in the preceding captures.
+
+Evidence limit: the exact moment the user clicked Finish Mission was not separately marked. This run proves only that the file was created between the crash mark and the debrief-visible mark. It does not by itself distinguish impact handling from mission finalization as the trigger.
+
 ## Remaining CW 0.1A gates
 
 - Career mission briefing/generation timing;
