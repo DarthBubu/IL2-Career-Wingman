@@ -58,3 +58,4 @@ Research and architecture
 * [Dynamic conversation architecture](docs/architecture/CW_DYNAMIC_CONVERSATION_ARCHITECTURE.md)
 * [Allied Radio integration](docs/architecture/CW_ALLIED_RADIO_INTEGRATION.md)
 * [End-to-end technical architecture](docs/architecture/CW_END_TO_END_TECHNICAL_ARCHITECTURE.md)
+* [TTS provider and low-latency speech architecture](docs/architecture/CW_TTS_PROVIDER_ARCHITECTURE.md)
