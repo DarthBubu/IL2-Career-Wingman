@@ -77,6 +77,28 @@ Observed result:
 
 Conclusion: in this run, launching IL-2 and reaching the main menu did not modify `_gen.Mission` or create/change a monitored `.mlg`. Later activity can therefore be compared against Career mission selection and mission loading rather than ordinary application startup.
 
+## Test 5 — Career mission generation/briefing
+
+Result: PASS — PRE-MISSION CONTEXT AVAILABLE
+
+Timeline:
+
+- `IL2 MAIN MENU - BEFORE CAREER`: elapsed 2,826 ms;
+- `_gen.Mission` changed: elapsed 70,068 ms;
+- `CAREER MISSION BRIEFING VISIBLE`: elapsed 110,030 ms.
+
+Observed file change:
+
+- path: `data\Missions\_gen.Mission`;
+- baseline size: 29,201,905 bytes;
+- new size: 29,163,996 bytes;
+- delta: -37,909 bytes;
+- read access: `read-open=OK`.
+
+No `.mlg` file was created or changed, and no ERROR or BLOCKED record occurred.
+
+Conclusion: in this run, selecting/opening the Career mission caused `_gen.Mission` to be rewritten approximately 39.962 seconds before the user marked the briefing as fully visible. Mission context is therefore available for read-only preflight parsing before Start Mission is clicked.
+
 ## Remaining CW 0.1A gates
 
 - Career mission briefing/generation timing;
