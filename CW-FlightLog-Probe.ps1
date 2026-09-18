@@ -107,6 +107,8 @@ function Poll-Targets {
     }
     foreach ($key in @($script:known.Keys)) {
         if (-not $seen.ContainsKey($key)) {
+            # A historical .mlg can leave the newest-candidate set without being deleted.
+            if ($key.EndsWith('.mlg') -and (Test-Path -LiteralPath $key -PathType Leaf)) { continue }
             $old = $script:known[$key]
             $script:known.Remove($key)
             Write-Event 'REMOVED' $key $old.Size 0 ''
